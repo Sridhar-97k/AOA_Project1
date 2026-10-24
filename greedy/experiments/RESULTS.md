@@ -1,0 +1,7 @@
+# Kruskal Runtime Experiment
+
+Run on 2026-10-24 in the project workspace on Windows. The implementation and benchmark were compiled with MinGW GCC 6.3.0 using `-std=c++17 -O2 -Wall -Wextra -pedantic`. Processor and memory details were unavailable to this sandbox; rerun on the submission machine and record them before making hardware-specific claims.
+
+The benchmark generated 28 connected synthetic graphs with 100-6400 buildings and `E = 2V`, `4V`, `8V`, or `16V` candidate routes. Route lengths were seeded positive random integers; generation occurred outside the timer. Seven trials were taken per graph, with repeated Kruskal calls within each trial to stabilize short measurements. [results.csv](results.csv) contains all 196 per-trial observations and seeds. [mst_runtime.png](../figures/mst_runtime.png) plots the median of each group.
+
+The smallest case (`V=100`, `E=200`) had a median of **10.0 microseconds** per run. The largest (`V=6400`, `E=102400`) had a median of **22,637 microseconds**. A line proportional to `E log2(E)` fitted through the origin gives (R^2=0.986) across the 28 median points. Measured `time / (E log2(E))` ranged from 0.00591 to 0.01542 microseconds per unit; small cases are particularly sensitive to timer noise and fixed costs. These measurements are consistent with the derived `O(E log E)` upper bound. They do not establish correctness or prove an asymptotic bound; the cut-property proof and independent tests address correctness.
