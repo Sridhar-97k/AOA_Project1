@@ -1,0 +1,42 @@
+Fig. 1 fit: time_ms = 9.4164e-07 * n log2 n,  R^2 = 0.99985
+
+Divide and conquer, median running time (ms):
+           n    LANDSLIDE       NARROW          TIE   FRAGMENTED
+       1,000        0.010        0.012        0.012        0.009
+       2,000        0.016        0.021        0.020        0.015
+       5,000        0.049        0.066        0.065        0.049
+      10,000        0.103        0.142        0.139        0.099
+      20,000        0.251        0.339        0.333        0.223
+      50,000        0.676        0.883        0.893        0.598
+     100,000        1.322        1.760        1.873        1.092
+     200,000        2.703        3.761        4.071        2.237
+     500,000        6.172        9.624        9.473        4.713
+   1,000,000       13.745       20.057       20.733       11.602
+   2,000,000       24.477       39.315       37.894       19.320
+   5,000,000       66.127      105.116      105.273       59.975
+  10,000,000      132.161      215.525      218.795      111.619
+
+Equality tests (median) vs. proven bound, tie elections:
+       1,000  tests=         6,932  bound=        20,999  ratio=0.330
+       2,000  tests=        14,159  bound=        45,999  ratio=0.308
+       5,000  tests=        42,244  bound=       134,999  ratio=0.313
+      10,000  tests=        91,377  bound=       289,999  ratio=0.315
+      20,000  tests=       193,377  bound=       619,999  ratio=0.312
+      50,000  tests=       522,199  bound=     1,649,999  ratio=0.316
+     100,000  tests=     1,098,148  bound=     3,499,999  ratio=0.314
+     200,000  tests=     2,286,849  bound=     7,399,999  ratio=0.309
+     500,000  tests=     5,718,782  bound=    19,499,999  ratio=0.293
+   1,000,000  tests=    12,203,304  bound=    40,999,999  ratio=0.298
+   2,000,000  tests=    25,567,598  bound=    85,999,999  ratio=0.297
+   5,000,000  tests=    67,525,379  bound=   234,999,999  ratio=0.287
+  10,000,000  tests=   142,470,959  bound=   489,999,999  ratio=0.291
+
+Doubling ratios T(2n)/T(n) for tie elections (n log n predicts slightly above 2):
+       1,000 ->      2,000: measured 1.72, predicted 2.20
+       5,000 ->     10,000: measured 2.14, predicted 2.16
+      10,000 ->     20,000: measured 2.40, predicted 2.15
+      50,000 ->    100,000: measured 2.10, predicted 2.13
+     100,000 ->    200,000: measured 2.17, predicted 2.12
+     500,000 ->  1,000,000: measured 2.19, predicted 2.11
+   1,000,000 ->  2,000,000: measured 1.83, predicted 2.10
+   5,000,000 -> 10,000,000: measured 2.08, predicted 2.09
