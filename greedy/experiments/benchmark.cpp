@@ -6,10 +6,12 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <functional>
 #include <random>
 #include <stdexcept>
 #include <unordered_set>
 #include <vector>
+#include <queue>
 
 namespace {
 
@@ -55,6 +57,43 @@ int inner_repetitions(int vertices) {
     return 3;
 }
 
+long long prim_total_length(int vertices,
+                            const std::vector<cabling::Edge>& edges) {
+    std::vector<std::vector<std::pair<int, int>>> adjacency(vertices);
+    for (const cabling::Edge& edge : edges) {
+        adjacency[edge.from].push_back({edge.length, edge.to});
+        adjacency[edge.to].push_back({edge.length, edge.from});
+    }
+
+    using Candidate = std::pair<int, int>;
+    std::priority_queue<Candidate, std::vector<Candidate>, std::greater<Candidate>> frontier;
+    std::vector<bool> visited(vertices, false);
+    frontier.push({0, 0});
+    long long total = 0;
+    int reached = 0;
+    while (!frontier.empty() && reached < vertices) {
+        const Candidate current = frontier.top();
+        frontier.pop();
+        const int length = current.first;
+        const int vertex = current.second;
+        if (visited[vertex]) {
+            continue;
+        }
+        visited[vertex] = true;
+        total += length;
+        ++reached;
+        for (const std::pair<int, int>& next : adjacency[vertex]) {
+            if (!visited[next.second]) {
+                frontier.push({next.first, next.second});
+            }
+        }
+    }
+    if (reached != vertices) {
+        throw std::runtime_error("benchmark graph unexpectedly disconnected");
+    }
+    return total;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -77,7 +116,7 @@ int main(int argc, char** argv) {
     constexpr int trials = 7;
     std::uint64_t checksum = 0;
 
-    *output << "vertices,edges,density_factor,seed,trial,elapsed_us,total_length\n";
+    *output << "algorithm,vertices,edges,density_factor,seed,trial,elapsed_us,total_length\n";
     *output << std::fixed << std::setprecision(3);
     for (int vertices : vertex_counts) {
         for (int factor : density_factors) {
@@ -89,21 +128,38 @@ int main(int argc, char** argv) {
             const int repetitions = inner_repetitions(vertices);
 
             for (int trial = 0; trial < trials; ++trial) {
-                const auto start = std::chrono::steady_clock::now();
-                long long total_length = 0;
+                const auto kruskal_start = std::chrono::steady_clock::now();
+                long long kruskal_length = 0;
                 for (int repeat = 0; repeat < repetitions; ++repeat) {
                     const cabling::MstResult result =
                         cabling::kruskal(vertices, edges);
-                    total_length = result.total_length;
-                    checksum ^= static_cast<std::uint64_t>(total_length + repeat);
+                    kruskal_length = result.total_length;
+                    checksum ^= static_cast<std::uint64_t>(kruskal_length + repeat);
                 }
-                const auto finish = std::chrono::steady_clock::now();
-                const double elapsed_us =
-                    std::chrono::duration<double, std::micro>(finish - start).count()
+                const auto kruskal_finish = std::chrono::steady_clock::now();
+                const double kruskal_us =
+                    std::chrono::duration<double, std::micro>(kruskal_finish - kruskal_start).count()
                     / repetitions;
-                *output << vertices << ',' << edge_count << ',' << factor << ','
-                        << seed << ',' << trial << ',' << elapsed_us << ','
-                        << total_length << '\n';
+                *output << "Kruskal," << vertices << ',' << edge_count << ',' << factor << ','
+                        << seed << ',' << trial << ',' << kruskal_us << ','
+                        << kruskal_length << '\n';
+
+                const auto prim_start = std::chrono::steady_clock::now();
+                long long prim_length = 0;
+                for (int repeat = 0; repeat < repetitions; ++repeat) {
+                    prim_length = prim_total_length(vertices, edges);
+                    checksum ^= static_cast<std::uint64_t>(prim_length + repeat + 17);
+                }
+                const auto prim_finish = std::chrono::steady_clock::now();
+                const double prim_us =
+                    std::chrono::duration<double, std::micro>(prim_finish - prim_start).count()
+                    / repetitions;
+                if (prim_length != kruskal_length) {
+                    throw std::runtime_error("Kruskal and Prim totals disagree");
+                }
+                *output << "Prim," << vertices << ',' << edge_count << ',' << factor << ','
+                        << seed << ',' << trial << ',' << prim_us << ','
+                        << prim_length << '\n';
             }
         }
     }
