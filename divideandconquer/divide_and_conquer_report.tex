@@ -618,13 +618,123 @@ because it is the implementation called by the benchmark.
 \lstinputlisting[language=Java,caption={Divide-and-conquer benchmark and validation harness}]{Benchmark.java}
 \lstinputlisting[language=Java,caption={Majority algorithm implementation}]{MajorityVote.java}
 
+\section{LLM Usage}\label{app:llm}
+
+\subsection{Tool and Scope}
+
+We used Claude (model Claude Opus 5.5, by Anthropic), accessed through the
+claude.ai web interface in October 2026. It was used to tackle the correctness of the problem,
+implement some of the Java code and plotting script, run the experiments, generate the
+figures, draft this report in LaTeX.
+
+\subsection{Prompts and Outputs}
+
+
+The LLM was asked in prompts to question the correctness of certain concepts. The prompts have been cleaned up but essentially they boil down to the following
+
+\begin{enumerate}
+\item \textbf{Question:} \emph{Prove that if $x$ is the majority of
+$L \circ R$, then $x$ is the majority of $L$ or of $R$. Make sure it holds
+when $|L| \ne |R|$.}\\
+\textbf{Answer:} Suppose $x$ is the majority of neither part. Then
+$\cnt_L(x) \le |L|/2$ and $\cnt_R(x) \le |R|/2$, and adding gives
+$\cnt_S(x) \le |S|/2$, a contradiction. The argument never uses $|L| = |R|$,
+so it holds for every split, including the $\lfloor m/2 \rfloor$ /
+$\lceil m/2 \rceil$ split used for odd $m$.
+
+\item \textbf{Question:} \emph{Show that a sequence has at most one majority,
+and that $\cnt > m/2$ is equivalent to $\cnt > \lfloor m/2 \rfloor$ for
+integer counts.}\\
+\textbf{Answer:} Two distinct values occupy disjoint positions, so
+$\cnt_S(x) + \cnt_S(y) \le |S|$; if both exceeded $|S|/2$ the sum would exceed
+$|S|$. For the threshold, the two conditions coincide when $m$ is even. When
+$m$ is odd, $m/2 = \lfloor m/2 \rfloor + \tfrac12$, and an integer $c$
+satisfies $c > \lfloor m/2 \rfloor + \tfrac12$ exactly when
+$c \ge \lfloor m/2 \rfloor + 1$, that is, when $c > \lfloor m/2 \rfloor$.
+
+\item \textbf{Question:} \emph{Is the case split on $(\ell, r)$ in
+Theorem~\ref{thm:correct} exhaustive?}\\
+\textbf{Answer:} Yes. Each of $\ell, r$ is either $\bot$ or a value, giving
+four combinations: both $\bot$ (Case~1); both values and equal (Case~2); both
+values and distinct (Case~3); exactly one $\bot$ (Case~3). Because $\Eq$ is an
+exact equality test, the algorithm's condition $\Eq(\ell, r)$ matches the
+proof's condition $\ell = r$.
+
+\item \textbf{Question:} \emph{In Case~3 with $\ell \ne r$ and both existing,
+can both finalists pass the count test?}\\
+\textbf{Answer:} No. Passing the test means $\cnt_S(x) > \lfloor m/2 \rfloor$,
+which by the previous answer means $x$ is the majority of $S$, and a sequence
+has at most one majority. Hence the order in which the loop checks the
+finalists does not affect the result.
+
+\item \textbf{Question:} \emph{Is the case $\ell = \bot$, $r \ne \bot$ fully
+covered by the recount branch?}\\
+\textbf{Answer:} Yes. Here $K = \{r\}$. Since $L$ has no majority,
+Lemma~\ref{lem:split} implies that any majority of $S$ must be the majority
+of $R$, which is $r$. The algorithm counts $r$ over $S$ and returns it exactly
+when it exceeds $\lfloor m/2 \rfloor$, and returns $\bot$ otherwise; both
+outcomes are correct. The loop skips $\bot$, so no equality test is made on
+it. The case $\ell \ne \bot$, $r = \bot$ is symmetric.
+
+\item \textbf{Question:} \emph{Where exactly does the proof use $m \ge 2$?}\\
+\textbf{Answer:} Since $mid = \lfloor (lo+hi)/2 \rfloor$ and $lo$ is an
+integer, $|L| = mid - lo = \lfloor m/2 \rfloor$ and
+$|R| = \lceil m/2 \rceil$. For $m \ge 2$ we get $\lfloor m/2 \rfloor \ge 1$
+and $\lceil m/2 \rceil \le m - 1$, so both halves are non-empty (the
+recursive calls satisfy the precondition $lo < hi$) and strictly shorter
+than $m$ (the induction hypothesis applies). For $m = 1$ one half would be
+empty, which is why $m = 1$ is the base case.
+
+\item \textbf{Question:} \emph{Prove an exact upper bound on the number of
+equality tests by counting the internal nodes of the recursion tree and
+bounding the work per level.}\\
+\textbf{Answer:} An internal node with segment length $s$ makes at most one
+agreement test and at most two counts of $s$ tests each, so at most $2s + 1$
+tests. The recursion tree is a full binary tree with $n$ leaves, so it has
+$n - 1$ internal nodes, contributing at most $n - 1$ for the ``$+1$'' terms.
+Segments at the same depth are disjoint, so their lengths sum to at most $n$,
+and internal nodes occur at $\lceil \log_2 n \rceil$ depths (next answer).
+The total is at most $2n\lceil\log_2 n\rceil + n - 1$, as in
+Theorem~\ref{thm:bound}.
+
+\item \textbf{Question:} \emph{Justify that internal nodes occur at only
+$\lceil \log_2 n \rceil$ depths when $n$ is not a power of~2.}\\
+\textbf{Answer:} By induction on depth, a node at depth $d$ has length at
+most $\lceil n/2^d \rceil$, using $\lceil \lceil a \rceil / 2 \rceil =
+\lceil a/2 \rceil$. An internal node has length at least $2$, and
+$\lceil n/2^d \rceil \ge 2$ holds exactly when $2^d < n$, that is, when
+$d \le \lceil \log_2 n \rceil - 1$. For example, with $n = 5$ the internal
+nodes have lengths $5$ (depth~0), $2$ and $3$ (depth~1), and $2$ (depth~2),
+which is $\lceil \log_2 5 \rceil = 3$ depths.
+
+\item \textbf{Question:} \emph{Is applying the Master Theorem valid with
+floors and ceilings?}\\
+\textbf{Answer:} Yes; Section~4.6.2 of~\cite{cormen2009introduction} shows
+that the Master Theorem's conclusions still hold when the subproblem sizes are
+$\lfloor n/b \rfloor$ or $\lceil n/b \rceil$. A direct argument also avoids
+the issue: by Theorem~\ref{thm:bound} the algorithm makes at most
+$2n\lceil\log_2 n\rceil + n - 1$ equality tests, and each of its $2n - 1$
+recursive calls does $O(1)$ work besides those tests, so
+$T(n) = O(n \log n)$.
+\end{enumerate}
+
+\subsection{Verification}
+
+The authors are responsible for the correctness of this report. The
+implementation was checked against two independent methods on 210{,}160
+inputs, including every input of length up to 8 over three candidates, and the
+bound of Theorem~\ref{thm:bound} was checked on every test and benchmark run.
+Each bibliographic reference was checked against the publisher's or author's
+page.
+% TODO: state which proof steps you re-checked yourselves.
+
 \section*{Code Availability}
 
 The complete Java implementation (\texttt{MajorityVote.java} and
 \texttt{Benchmark.java}), the plotting script (\texttt{plot\_results.py}),
 and the raw benchmark results (\texttt{results.csv}) are available in our
 repository. The complete code repository is available at
-\href{https://github.com/Sridhar-97k/AOA_Project1.git}{github.com/Sridhar-97k/AOA\_Project1}.
+\href{https://github.com/Sridhar-97k/AOA_Project1.git}{github}.
 To reproduce the results, run \texttt{javac MajorityVote.java Benchmark.java},
 then \texttt{java Benchmark verify}, \texttt{java -Xmx3g Benchmark bench
 results.csv}, and \texttt{python3 plot\_results.py results.csv figures}.
